@@ -359,14 +359,14 @@ function App() {
                     <Area 
                       type="monotone" 
                       dataKey="Historical Sales" 
-                      fill="#8884d8" 
-                      stroke="#8884d8" 
+                      fill="#81beed" 
+                      stroke="#81beed" 
                       opacity={0.2}
                     />
                     <Line 
                       type="monotone" 
                       dataKey="Historical Sales" 
-                      stroke="#8884d8" 
+                      stroke="#81beed" 
                       strokeWidth={2} 
                       dot={{ r: 3 }}
                       activeDot={{ r: 5 }}
@@ -374,7 +374,7 @@ function App() {
                     <Line 
                       type="monotone" 
                       dataKey="Forecast Sales" 
-                      stroke="#82ca9d" 
+                      stroke="#fffffb" 
                       strokeWidth={2} 
                       strokeDasharray="5 5"
                       dot={{ r: 3 }}
@@ -443,7 +443,7 @@ function App() {
                       <XAxis dataKey="month" />
                       <YAxis />
                       <Tooltip formatter={(value) => formatCurrency(value)} />
-                      <Bar dataKey="average" fill="#8884d8" name="Average Monthly Sales" />
+                      <Bar dataKey="average" fill="#81beed" name="Average Monthly Sales" />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -465,9 +465,9 @@ function App() {
                       <YAxis />
                       <Tooltip formatter={(value) => formatCurrency(value)} />
                       <Legend />
-                      <Line type="monotone" dataKey="linear" stroke="#8884d8" name="Linear Regression" />
-                      <Line type="monotone" dataKey="xgboost" stroke="#82ca9d" name="XGBoost" />
-                      <Line type="monotone" dataKey="lstm" stroke="#ffc658" name="LSTM" />
+                      <Line type="monotone" dataKey="linear" stroke="#81beed" name="Linear Regression" />
+                      <Line type="monotone" dataKey="xgboost" stroke="#a0abbf" name="XGBoost" />
+                      <Line type="monotone" dataKey="lstm" stroke="#fffffb" name="LSTM" />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
@@ -512,9 +512,52 @@ function App() {
             <div className="python-controls">
               <button 
                 className="run-python-btn" 
-                onClick={() => {
-                  // In a real app, this would make an API call to the Python backend
-                  alert('In a production environment, this would connect to your Python script');
+                onClick={async () => {
+                  try {
+                    // Set loading state
+                    setIsLoading(true);
+                    
+                    // Call the Flask API
+                    const response = await fetch('http://localhost:5000/api/run-model', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        model: selectedModel,
+                        timeframe: timeframe
+                      }),
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                      // Update the predictions with the new forecast data
+                      const newPredictions = { ...predictions };
+                      
+                      // Convert string dates to Date objects
+                      newPredictions[selectedModel] = result.forecast.map(item => ({
+                        date: new Date(item.date),
+                        sales: item.sales,
+                        model: selectedModel
+                      }));
+                      
+                      setPredictions(newPredictions);
+                      
+                      // Update metrics
+                      const newMetrics = { ...modelMetrics };
+                      newMetrics[selectedModel] = result.metrics;
+                      setModelMetrics(newMetrics);
+                      
+                      alert('ML Models successfully updated with Python backend data!');
+                    } else {
+                      alert('Error: ' + result.message);
+                    }
+                  } catch (error) {
+                    alert('Connection error: ' + error.message);
+                  } finally {
+                    setIsLoading(false);
+                  }
                 }}
               >
                 Run ML Models
